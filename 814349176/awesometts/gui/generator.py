@@ -283,6 +283,7 @@ class BrowserGenerator(ServiceDialog):
                 'okay': 0,  # calls which resulted in a successful MP3
                 'fail': 0,  # calls which resulted in an exception
             },
+            'failednotes': [],
             'exceptions': {},
             'throttling': {
                 'calls': {},  # unthrottled download calls made per service
@@ -293,7 +294,6 @@ class BrowserGenerator(ServiceDialog):
 
         self._browser.mw.checkpoint("AwesomeTTS Batch Update")
         self._process['progress'].show()
-        self._browser.model.beginReset()
 
         self._accept_next()
 
@@ -350,10 +350,11 @@ class BrowserGenerator(ServiceDialog):
             proc['counts']['okay'] += 1
             note.flush()
 
-        def fail(exception):
+        def fail(exception, text="Not available by _accept_next.fail"):
             """Count the failure and the unique message."""
 
             proc['counts']['fail'] += 1
+            proc['failednotes'].append(text)
 
             message = str(exception)
             if isinstance(message, str):
@@ -490,7 +491,7 @@ class BrowserGenerator(ServiceDialog):
         Display statistics and close out the dialog.
         """
 
-        self._browser.model.endReset()
+        self._browser.model.reset()
 
         proc = self._process
         proc['progress'].accept()
@@ -553,6 +554,8 @@ class BrowserGenerator(ServiceDialog):
                     for message, count
                     in proc['exceptions'].items()
                 ]
+            messages.append("\n\nThe following note(s) have failed:\n")
+            messages.append("".join(f"'{note}', " for note in proc['failednotes']))
 
         else:
             messages.append("there were no errors.")
@@ -794,7 +797,7 @@ class EditorGenerator(ServiceDialog):
                 super(EditorGenerator, self).accept(),
                 self._editor.addMedia(path),
             ),
-            fail=lambda exception: (
+            fail=lambda exception, text_value: (
                 self._alerts("Cannot record the input phrase with these "
                              "settings.\n\n%s" % exception, self),
                 text_input.setFocus(),
