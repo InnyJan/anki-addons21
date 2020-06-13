@@ -34,6 +34,7 @@ import anki.lang
 import anki.storage
 import aqt
 from anki.exporting import AnkiPackageExporter
+from anki.importing import AnkiPackageImporter
 
 from . import web, util
 
@@ -197,24 +198,24 @@ class AnkiConnect:
 
         ankiNote = anki.notes.Note(collection, model)
         ankiNote.model()['did'] = deck['id']
-        ankiNote.tags = note['tags']
+        if 'tags' in note:
+            ankiNote.tags = note['tags']
 
         for name, value in note['fields'].items():
             if name in ankiNote:
-                # zdz@23/4/20: Workaround for field templates not working in Yomichan
-                if name == "Meaning":
-                    value = re.sub("style=\"text-align: left;\"", "style=\"text-align: center;\"", value)
                 ankiNote[name] = value
 
         allowDuplicate = False
+        duplicateScope = None
         if 'options' in note:
           if 'allowDuplicate' in note['options']:
             allowDuplicate = note['options']['allowDuplicate']
             if type(allowDuplicate) is not bool:
               raise Exception('option parameter \'allowDuplicate\' must be boolean')
+          if 'duplicateScope' in note['options']:
+            duplicateScope = note['options']['duplicateScope']
 
-        # zdz@22/4/20: duplicateOrEmpty = self.isNoteDuplicateOrEmptyInDeck(ankiNote, deck)
-        duplicateOrEmpty = self.isNoteDuplicateOrEmpty(ankiNote) #zdz: replaced isNoteDuplicateOrEmptyInDeck() for isNoteDuplicateOrEmpty()
+        duplicateOrEmpty = self.isNoteDuplicateOrEmptyInScope(ankiNote, deck, duplicateScope)
         if duplicateOrEmpty == 1:
             raise Exception('cannot create note because it is empty')
         elif duplicateOrEmpty == 2:
@@ -227,19 +228,15 @@ class AnkiConnect:
         else:
             raise Exception('cannot create note for unknown reason')
 
-    def isNoteDuplicateOrEmpty(self, note):
-        result = note.dupeOrEmpty()
-        return (result == 2 or result == 1)
-    
-    def isNoteDuplicateOrEmptyInDeck(self, note, deck):
+    def isNoteDuplicateOrEmptyInScope(self, note, deck, duplicateScope):
         "1 if first is empty; 2 if first is a duplicate, False otherwise."
         result = note.dupeOrEmpty()
-        if result != 2:
+        if result != 2 or duplicateScope != 'deck':
             return result
 
         # dupeOrEmpty returns if a note is a global duplicate
         # the rest of the function checks to see if the note is a duplicate in the deck
-        val = note.fields[0].strip()
+        val = note.fields[0]
         did = deck['id']
         csum = anki.utils.fieldChecksum(val)
 
@@ -266,6 +263,9 @@ class AnkiConnect:
     def version(self):
         return util.setting('apiVersion')
 
+    @util.api()
+    def getProfiles(self):
+        return self.window().pm.profiles()
 
     @util.api()
     def loadProfile(self, name):
@@ -296,6 +296,13 @@ class AnkiConnect:
     @util.api()
     def getNumCardsReviewedToday(self):
         return self.database().scalar('select count() from revlog where id > ?', (self.scheduler().dayCutoff - 86400) * 1000)
+
+
+    @util.api()
+    def getCollectionStatsHTML(self, wholeCollection=True):
+        stats = self.collection().stats()
+        stats.wholeCollection = wholeCollection
+        return stats.report()
 
 
     #
@@ -811,7 +818,7 @@ class AnkiConnect:
         if query is None:
             return []
         else:
-            return self.collection().findNotes(query)
+            return list(map(int, self.collection().findNotes(query)))
 
 
     @util.api()
@@ -819,7 +826,7 @@ class AnkiConnect:
         if query is None:
             return []
         else:
-            return self.collection().findCards(query)
+            return list(map(int, self.collection().findCards(query)))
 
 
     @util.api()
@@ -1220,6 +1227,22 @@ class AnkiConnect:
                 return True
         return False
 
+    @util.api()
+    def importPackage(self, path):
+        collection = self.collection()
+        if collection is not None:
+            try:
+                self.startEditing()
+                importer = AnkiPackageImporter(collection, path)
+                importer.run()
+            except:
+                self.stopEditing()
+                raise
+            else:
+                self.stopEditing()
+                return True
+
+        return False
 
 #
 # Entry
