@@ -4,6 +4,9 @@
 Simplified version of the True Retention by Card Maturity Add-on
 (https://ankiweb.net/shared/info/923360400)
 
+This Add-on is accessible at:
+https://ankiweb.net/shared/info/1779060522
+
 License: GNU AGPLv3 or later <https://www.gnu.org/licenses/agpl.html>
 """
 
@@ -81,18 +84,18 @@ def todayStats(self):
     
     pastDay = statList(self, lim, (self.col.sched.dayCutoff-86400)*1000)
 
-    pastSecondDay = statList(self, lim, (self.col.sched.dayCutoff-86400*2)*1000)
-    pastSecondDay[0] -= pastDay[0]
-    pastSecondDay[1] -= pastDay[1]
-    pastSecondDay[2] = retentionAsString(pastSecondDay[0], pastSecondDay[0] + pastSecondDay[1])
-    pastSecondDay[3] -= pastDay[3]
-    pastSecondDay[4] -= pastDay[4]
-    pastSecondDay[5] = retentionAsString(pastSecondDay[3], pastSecondDay[3] + pastSecondDay[4])
-    pastSecondDay[6] = pastSecondDay[0] + pastSecondDay[3]
-    pastSecondDay[7] = pastSecondDay[1] + pastSecondDay[4]
-    pastSecondDay[8] = retentionAsString(pastSecondDay[6], pastSecondDay[6] + pastSecondDay[7])
-    pastSecondDay[9] -= pastDay[9]
-    pastSecondDay[10] -= pastDay[10]
+    pastYesterday = statList(self, lim, (self.col.sched.dayCutoff-86400*2)*1000)
+    pastYesterday[0] -= pastDay[0]
+    pastYesterday[1] -= pastDay[1]
+    pastYesterday[2] = retentionAsString(pastYesterday[0], pastYesterday[0] + pastYesterday[1])
+    pastYesterday[3] -= pastDay[3]
+    pastYesterday[4] -= pastDay[4]
+    pastYesterday[5] = retentionAsString(pastYesterday[3], pastYesterday[3] + pastYesterday[4])
+    pastYesterday[6] = pastYesterday[0] + pastYesterday[3]
+    pastYesterday[7] = pastYesterday[1] + pastYesterday[4]
+    pastYesterday[8] = retentionAsString(pastYesterday[6], pastYesterday[6] + pastYesterday[7])
+    pastYesterday[9] -= pastDay[9]
+    pastYesterday[10] -= pastDay[10]
 
     pastWeek = statList(self, lim, (self.col.sched.dayCutoff-86400*7)*1000)
     
@@ -116,7 +119,7 @@ def todayStats(self):
             span.yam { color: #55aa55 }
             span.relearn { color: #c35617 }
         </style>
-        <br />
+        <br /><br />
         <table style="border-collapse: collapse;" cellspacing="0" cellpadding="2">
             <tr>
                 <td class="trl" rowspan=3><b>Past</b></td>
@@ -142,7 +145,7 @@ def todayStats(self):
                 <td class="trc"><span class="yam"><i>Retention</i></span></td>
             </tr>"""
     rv += statsRow("Day", pastDay)
-    rv += statsRow("Yesterday", pastSecondDay)
+    rv += statsRow("Yesterday", pastYesterday)
     rv += statsRow("Week", pastWeek)
     rv += statsRow(pname, pastPeriod)
     rv += "</table>"
