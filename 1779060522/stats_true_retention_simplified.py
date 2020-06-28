@@ -20,6 +20,7 @@ MATURE_IVL = 21 # mature card interval in days
 
 import anki.stats
 
+from anki.hooks import wrap
 from anki.utils import fmtTimeSpan
 from anki.lang import _, ngettext
 from anki import version as anki_version
@@ -77,7 +78,9 @@ def statsRow(name, values):
             <td class="trr"><span class="relearn">""" + str(values[10]) + u"""</span></td>
         </tr>"""
 
-def todayStats(self):
+def todayStats(*args, **kwargs):
+    self = args[0]
+    todayStatsOld = kwargs['_old']
     lim = self._revlogLimit()
     if lim:
         lim = u" and " + lim
@@ -107,7 +110,7 @@ def todayStats(self):
         period = float('inf'); pname = u"Deck life"    
     pastPeriod = statList(self, lim, (self.col.sched.dayCutoff-86400*period)*1000)
     
-    rv = todayStats_old(self)
+    rv = todayStatsOld(self)
     rv += anki.stats.CollectionStats._title(self, _("True Retention"), _("The true retention is calculated on learned cards only."))
     rv += u"""
         <style>
@@ -152,5 +155,4 @@ def todayStats(self):
 
     return rv
 
-todayStats_old = anki.stats.CollectionStats.todayStats
-anki.stats.CollectionStats.todayStats = todayStats
+anki.stats.CollectionStats.todayStats = wrap(anki.stats.CollectionStats.todayStats, todayStats, pos="")
